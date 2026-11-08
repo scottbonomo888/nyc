@@ -426,9 +426,13 @@ function state(p){let acc=0;for(const s of segs){const f=s.w/W;if(p<=acc+f||s===
 /* ---------- camera ---------- */
 let Wc=0,Hc=0,dpr=1,cam=null,raf=0,prog=0;
 function fitZoom(){return Math.min(Wc/(wx1-wx0-2200),Hc/(wy1-wy0-2400))}
+/* the overview frames the whole route inside the clear area: below the header, above the card, with a margin either side */
+function overview(){const bw=wx1-wx0-3000,bh=wy1-wy0-3000,top=120*dpr,bot=200*dpr,side=34*dpr;
+  const z=Math.min((Wc-2*side)/bw,(Hc-top-bot)/bh,Hc/1500);
+  return{x:(wx0+wx1)/2,y:(wy0+wy1)/2+(bot-top)/2/z,z}}
 function target(){
-  const {s,u}=state(prog), z0=fitZoom(), zWalk=Hc/1500, zSub=Hc/5200;
-  const mid=[(wx0+wx1)/2,(wy0+wy1)/2], first=legs[0].pts[0], last=legs[legs.length-1].pts.slice(-1)[0];
+  const {s,u}=state(prog), O=overview(), z0=O.z, zWalk=Hc/1500, zSub=Hc/5200;
+  const mid=[O.x,O.y], first=legs[0].pts[0], last=legs[legs.length-1].pts.slice(-1)[0];
   const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
   if(s.k==="intro"){const e=ease(Math.max(0,(u-.35)/.65));return{x:mid[0]+(first[0]-mid[0])*e,y:mid[1]+(first[1]-mid[1])*e,z:Math.exp(Math.log(z0)+(Math.log(zWalk)-Math.log(z0))*e),head:{leg:-1,d:0}}}
   if(s.k==="outro"){const e=ease(u);return{x:last[0]+(mid[0]-last[0])*e,y:last[1]+(mid[1]-last[1])*e,z:Math.exp(Math.log(zWalk)+(Math.log(z0)-Math.log(zWalk))*e),head:{leg:legs.length,d:0}}}
@@ -483,18 +487,26 @@ function frame(){
   // a stop is reached once the leg arriving at it is (nearly) walked
   let cur=-1;M.stops.forEach((s,i)=>{if(headInfo.leg>=s.leg||(s.leg>0&&headInfo.leg===s.leg-1&&headInfo.d>=legs[s.leg-1].len-25))cur=i});
   if(headInfo.leg<0)cur=-1;
-  M.stops.forEach((s,i)=>{const x=sx(s.p[0]),y=sy(s.p[1]),reached=i<=cur,now=i===cur,r=(now?13:10)*dpr;
+  const order=M.stops.map((s,i)=>i).filter(i=>i!==cur);if(cur>=0)order.push(cur);
+  const placed=[],labs=[];
+  const lab=(i,x,y,r,now)=>{if(!((now||z>.9)&&headInfo.leg>=0))return;ctx.font=(now?"600 ":"500 ")+(now?13:11)*dpr+"px 'Archivo',sans-serif";
+    const t=M.stops[i].name,tw=ctx.measureText(t).width;let px=x+r+6*dpr;if(px+tw+10*dpr>Wc)px=x-r-6*dpr-tw;
+    const R=[px-4*dpr,y-9*dpr,px+tw+4*dpr,y+9*dpr];if(!now&&placed.some(q=>R[0]<q[2]&&R[2]>q[0]&&R[1]<q[3]&&R[3]>q[1]))return;placed.push(R);labs.push({t,px,y,tw,now})};
+  if(cur>=0)lab(cur,sx(M.stops[cur].p[0]),sy(M.stops[cur].p[1]),13*dpr,true);
+  M.stops.forEach((s,i)=>{if(i!==cur)lab(i,sx(s.p[0]),sy(s.p[1]),10*dpr,false)});
+  order.forEach(i=>{const s=M.stops[i],x=sx(s.p[0]),y=sy(s.p[1]),reached=i<=cur,now=i===cur,r=(now?13:10)*dpr;
     ctx.fillStyle=reached?C.ink:"#F5F1EA";ctx.strokeStyle=C.ink;ctx.lineWidth=1.6*dpr;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.stroke();
-    ctx.fillStyle=reached?"#F5F1EA":C.ink;ctx.font="500 "+(10*dpr)+"px 'DM Mono',monospace";ctx.fillText(String(i+1),x,y+.5*dpr);
-    if((now||z>.9)&&headInfo.leg>=0){ctx.font=(now?"600 ":"500 ")+(now?13:11)*dpr+"px 'Archivo',sans-serif";const t=s.name,tw=ctx.measureText(t).width,px=x+r+6*dpr,py=y;
-      ctx.fillStyle=now?C.ink:"rgba(245,241,234,.9)";ctx.fillRect(px-4*dpr,py-9*dpr,tw+8*dpr,18*dpr);ctx.fillStyle=now?"#F5F1EA":C.ink;ctx.textAlign="left";ctx.fillText(t,px,py+.5*dpr);ctx.textAlign="center"}});
-  if(cur!==lastStop){lastStop=cur;showCard(cur)}
+    ctx.fillStyle=reached?"#F5F1EA":C.ink;ctx.font="500 "+(10*dpr)+"px 'DM Mono',monospace";ctx.fillText(String(i+1),x,y+.5*dpr)});
+  ctx.textAlign="left";labs.reverse().forEach(L=>{ctx.font=(L.now?"600 ":"500 ")+(L.now?13:11)*dpr+"px 'Archivo',sans-serif";
+    ctx.fillStyle=L.now?C.ink:"rgba(245,241,234,.9)";ctx.fillRect(L.px-4*dpr,L.y-9*dpr,L.tw+8*dpr,18*dpr);ctx.fillStyle=L.now?"#F5F1EA":C.ink;ctx.fillText(L.t,L.px,L.y+.5*dpr)});ctx.textAlign="center";
+  const key=walking&&prog>.985?-9:cur; if(key!==lastStop){lastStop=key;showCard(key)}
   if(moving||pending)raf=requestAnimationFrame(frame);
 }
 function showCard(i){
   showCard1(i);if(walking)card.insertAdjacentHTML("beforeend",'<button type="button" class="mdone" data-done>Done ✕</button>')}
 function showCard1(i){
   const n=M.stops.length;
+  if(i===-9){card.innerHTML=`<div class="mk">End of the route · ${n} stops</div><div class="mt">That's the day</div><div class="mp">Swipe up again for the contents.</div><button type="button" class="mgo" data-go="toc">Contents ↓</button>`;return}
   if(headInfo.leg<0){card.innerHTML=walking
     ?`<div class="mk">The day at a glance · ${n} stops</div><div class="mt">Scroll to walk</div><div class="mp">Each swipe up moves along the route. Tap Done to leave the walk.</div>`
     :`<div class="mk">The day at a glance · ${n} stops</div><div class="mt">The route</div><div class="mp">${[legs.some(l=>l.mode==="walk")&&"Walking in ink",legs.some(l=>l.mode==="sub")&&"subway rides dashed",legs.some(l=>l.mode==="taxi")&&"taxi rides in gold"].filter(Boolean).join(", ").replace(/^./,c=>c.toUpperCase())}. Swipe up for the contents.</div><button type="button" class="mgo" data-walk>Walk the map →</button>`;return}
@@ -505,7 +517,15 @@ function showCard1(i){
 const sec=document.getElementById("map"); let walking=false;
 function setWalk(on){walking=on;sec.classList.toggle("walking",on);if(!on){mapv.scrollTop=0;prog=0}lastStop=-2;kick()}
 card.addEventListener("click",e=>{if(e.target.closest("[data-walk]"))setWalk(true);else if(e.target.closest("[data-done]"))setWalk(false)});
-mapv.addEventListener("scroll",()=>{const m=mapv.scrollHeight-mapv.clientHeight;prog=m>0?mapv.scrollTop/m:0;kick()},{passive:true});
+/* at the end of the walk, the next swipe up leaves the map for the contents; the map resets to the overview once it's off screen */
+let endSince=0,ty=null,tEnd=false;
+const atEnd=()=>prog>.985; // same point the "End of the route" card appears
+function toContents(){const t=document.getElementById("toc");if(!t)return;walking=false;document.getElementById("v").scrollTo({top:t.offsetTop,behavior:RM0?"auto":"smooth"});setTimeout(()=>setWalk(false),700)}
+mapv.addEventListener("scroll",()=>{const m=mapv.scrollHeight-mapv.clientHeight;prog=m>0?mapv.scrollTop/m:0;endSince=walking&&atEnd()?endSince||Date.now():0;kick()},{passive:true});
+mapv.addEventListener("touchstart",e=>{ty=e.touches.length===1?e.touches[0].clientY:null;tEnd=walking&&atEnd()},{passive:true});
+mapv.addEventListener("touchmove",e=>{if(ty!=null&&tEnd&&walking&&ty-e.touches[0].clientY>40){ty=null;toContents()}},{passive:true});
+mapv.addEventListener("touchend",()=>{ty=null},{passive:true});
+mapv.addEventListener("wheel",e=>{if(walking&&endSince&&e.deltaY>0&&Date.now()-endSince>400)toContents()},{passive:true});
 cvs.addEventListener("click",e=>{if(!cam||(md&&md.moved))return;const r=cvs.getBoundingClientRect(),x=(e.clientX-r.left)*dpr,y=(e.clientY-r.top)*dpr,z=cam.z;
   const wx=(x-Wc/2)/z+cam.x,wy=(y-Hc/2)/z+cam.y,hit=(p,R)=>Math.hypot((p[0]-wx)*z,(p[1]-wy)*z)<R*dpr;
   if(z>.7&&(headInfo.leg>=0||explore)){let best=null,bd=1e9;for(const p of M.pins){if(hidden.has(p.cat))continue;const d=Math.hypot((p.p[0]-wx)*z,(p.p[1]-wy)*z);if(d<bd){bd=d;best=p}}
