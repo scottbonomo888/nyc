@@ -180,16 +180,22 @@ body{margin:0;background:#D9D1C3;color:var(--ink);font-family:var(--display);ove
 .chips{position:sticky;top:-1px;z-index:2;display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:var(--paper);scrollbar-width:none;border-bottom:1px solid var(--line)}
 .chips::-webkit-scrollbar{display:none}
 .chips button{all:unset;cursor:pointer;flex:none;display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--white);border:1px solid var(--line);font:500 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase}
-.chips i,.mg h5 i{width:9px;height:9px;border-radius:50%;flex:none}
-.mg{padding:0 12px;scroll-margin-top:52px}
-.mg h5{display:flex;align-items:center;gap:8px;margin:20px 8px 6px;font:500 20px/1 var(--display);font-stretch:70%;text-transform:uppercase;letter-spacing:.03em}
+.chips i,.mg h5 i{width:11px;height:11px;border-radius:50%;flex:none}
+.mg{margin:10px 12px 0;scroll-margin-top:58px;background:color-mix(in srgb,var(--c) 13%,var(--paper));border:1px solid color-mix(in srgb,var(--c) 35%,var(--paper))}
+.mg h5 .mgh{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:10px;padding:14px 12px}
+.mg h5 .mgh:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+.mg .ar{flex:none;width:22px;text-align:center;font:400 22px/1 var(--display);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.mg .mgh[aria-expanded="true"] .ar{transform:rotate(90deg)}
+.mg ul[hidden]{display:none}
+.mg h5{margin:0;font:500 20px/1 var(--display);font-stretch:70%;text-transform:uppercase;letter-spacing:.03em}
 .mg h5 span{margin-left:auto;font:500 10px/1 var(--mono);letter-spacing:.1em;color:var(--dim)}
-.mg ul{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-.mg li{border-bottom:1px solid var(--line)}
+.mg ul{list-style:none;margin:0;padding:0 4px 4px;border-top:1px solid color-mix(in srgb,var(--c) 35%,var(--paper))}
+.mg li{border-bottom:1px solid color-mix(in srgb,var(--c) 22%,var(--paper))}
+.mg li:last-child{border-bottom:0}
 .mg button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:baseline;gap:10px;padding:11px 8px}
 .mg .pn{flex:1;min-width:0;font-size:15px;line-height:1.3}
 .mg .pk{display:block;font:400 10.5px/1.35 var(--mono);color:var(--dim);letter-spacing:.03em;margin-top:2px}
-.mg .pd{flex:none;font:500 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);padding:5px 7px;border:1px solid var(--line)}
+.mg .pd{flex:none;font:500 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink);padding:5px 7px;background:rgba(255,255,255,.55);border:1px solid color-mix(in srgb,var(--c) 35%,var(--paper))}
 
 /* previous / next day at the foot of each day */
 .dnav{margin-top:auto;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:16px;border-top:1px solid var(--line)}
@@ -272,7 +278,7 @@ function buildMenu(){
       :`<li><span class="soon"><span class="dw">${esc(d.dow.slice(0,3))}<b>${esc(d.date.split(" ")[1])}</b></span><span class="dt">${esc(d.dow)} · ${esc(d.date)}</span><span class="ds">Coming soon</span></span></li>`).join("")}</ul>
     <h4>All places by type</h4>
     <div class="chips">${groups.map(g=>`<button type="button" data-mjump="mg-${g.c}"><i style="background:${g.col}"></i>${esc(g.label)}</button>`).join("")}</div>
-    ${groups.map(g=>`<section class="mg" id="mg-${g.c}"><h5><i style="background:${g.col}"></i>${esc(g.label)}<span>${g.items.length}</span></h5><ul>${g.items.map(p=>
+    ${groups.map(g=>`<section class="mg" id="mg-${g.c}" style="--c:${g.col}"><h5><button type="button" class="mgh" data-mtog aria-expanded="false" aria-controls="mgl-${g.c}"><i style="background:${g.col}"></i>${esc(g.label)}<span>${g.items.length}</span><b class="ar" aria-hidden="true">›</b></button></h5><ul id="mgl-${g.c}" hidden>${g.items.map(p=>
       `<li><button type="button" data-mplace="${p.d.id}|${p.si}|${p.ci}"><span class="pn">${esc(p.st.t)}<span class="pk">${esc(p.d.sections[p.si].title)}${p.st.addr?" · "+esc(p.st.addr.split(" (")[0]):""}</span></span><span class="pd">${esc(p.d.dow.slice(0,3))} ${esc(p.d.date.split(" ")[1])}</span></button></li>`).join("")}</ul></section>`).join("")}`;
 }
 function build(){
@@ -636,7 +642,8 @@ mbtn.onclick=()=>menu.hidden?openMenu():closeMenu(true);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!menu.hidden)closeMenu(true)});
 menu.addEventListener("click",e=>{
   if(e.target.closest("#mclose"))return closeMenu(true);
-  const j=e.target.closest("[data-mjump]");if(j){const g=document.getElementById(j.dataset.mjump);if(g)g.scrollIntoView({behavior:RM0?"auto":"smooth"});return}
+  const tg=e.target.closest("[data-mtog]");if(tg){const open=tg.getAttribute("aria-expanded")!=="true";tg.setAttribute("aria-expanded",open);document.getElementById(tg.getAttribute("aria-controls")).hidden=!open;return}
+  const j=e.target.closest("[data-mjump]");if(j){const g=document.getElementById(j.dataset.mjump);if(g){const h=g.querySelector("[data-mtog]");h.setAttribute("aria-expanded","true");document.getElementById(h.getAttribute("aria-controls")).hidden=false;g.scrollIntoView({behavior:RM0?"auto":"smooth"})}return}
   const dd=e.target.closest("[data-mday]");if(dd){setDay(dd.dataset.mday);closeMenu();return}
   const pl=e.target.closest("[data-mplace]");if(!pl)return;
   const [id,si,ci]=pl.dataset.mplace.split("|");setDay(id);closeMenu();
