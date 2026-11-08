@@ -51,7 +51,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET") return;
   if (req.mode === "navigate") {
     e.respondWith((async () => {
-      try { const r = await fetch(req); if (r.ok) (await caches.open(CORE)).put("./", r.clone()); return r; }
+      try { const r = await fetch(req.url, { cache: "no-cache" }); if (r.ok) (await caches.open(CORE)).put("./", r.clone()); return r; } // skip the 10-min browser cache so updates show at once
       catch (err) { return (await caches.match("./")) || Response.error(); }
     })()); return;
   }
