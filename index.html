@@ -168,13 +168,16 @@ body{margin:0;background:#D9D1C3;color:var(--ink);font-family:var(--display);ove
 .menu .mh b{font:300 34px/1 var(--display);font-stretch:62%;text-transform:uppercase}
 .menu h4{margin:18px 20px 8px;font:500 10.5px/1.2 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
 .mdays{list-style:none;margin:0;padding:0 12px;display:flex;flex-direction:column;gap:5px}
-.mdays button,.mdays span.soon{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:52px 1fr auto;align-items:center;gap:2px 12px;padding:12px 14px;background:var(--white);border:1px solid var(--line)}
+.mdays button,.mdays span.soon{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:44px 1fr;align-items:start;gap:0 14px;padding:15px 16px 16px;background:var(--white);border:1px solid var(--line)}
 .mdays span.soon{cursor:default;opacity:.5;background:transparent}
-.mdays .dw{grid-row:1 / span 2;font:500 10px/1.2 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
-.mdays .dw b{display:block;font:400 26px/1 var(--display);font-stretch:66%;color:var(--ink);margin-top:2px}
-.mdays .dt{font:500 17px/1.1 var(--display);font-stretch:70%;text-transform:uppercase;letter-spacing:.03em}
-.mdays .ds{font-size:12px;line-height:1.35;color:var(--dim)}
-.mdays .dc{grid-row:1 / span 2;font:500 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--sage)}
+.mdays .dw{grid-row:1 / span 2;padding-top:1px;font:500 10px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.mdays .dw b{display:block;font:400 30px/.95 var(--display);font-stretch:66%;letter-spacing:0;color:var(--ink);margin-top:4px}
+.mdays .dt{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 10px;min-width:0}
+.mdays .dd{font:500 10px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.mdays .dc{margin-left:auto;font:500 9.5px/1.2 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--sage)}
+.mdays .dn{flex-basis:100%;margin-top:6px;font:500 20px/1.05 var(--display);font-stretch:68%;text-transform:uppercase;letter-spacing:.02em;color:var(--ink);text-wrap:balance}
+.mdays .ds{grid-column:2;margin-top:7px;font-size:12.5px;line-height:1.5;color:var(--dim);text-wrap:pretty}
+.mdays .ds>span{white-space:nowrap}
 .mdays button[aria-current] {border-color:var(--ink);box-shadow:inset 3px 0 0 var(--ink)}
 .mdays button:focus-visible,.chips button:focus-visible,.mg button:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .chips{position:sticky;top:-1px;z-index:2;display:flex;gap:6px;overflow-x:auto;padding:8px 12px;background:var(--paper);scrollbar-width:none;border-bottom:1px solid var(--line)}
@@ -268,13 +271,15 @@ const near=()=>{const i=READY.indexOf(day);return [READY[i-1],READY[i+1]]};
 const dlabel=d=>`${d.dow} ${d.date}`;
 function dayNav(){const [p,n]=near();if(!p&&!n)return"";
   return `<div class="dnav">${p?`<button type="button" data-day="${p.id}"><span>← Previous day</span><b>${esc(p.dow)} ${esc(p.date)}</b></button>`:""}${n?`<button type="button" class="nx" data-day="${n.id}"><span>Next day →</span><b>${esc(n.dow)} ${esc(n.date)}</b></button>`:""}</div>`}
+/* the day's name in the menu is its film title ("Central Park to the West Village"); a capitalised second line starts its own line */
+function dayTitle(id){const f=INTROS[id];if(!f)return"";const h=f.h.replace(/<br>/g," ");return f.sub?h+(/^[a-z]/.test(f.sub)?" ":"<br>")+f.sub:h}
 function buildMenu(){
   const places=[];
   READY.forEach(d=>d.sections.forEach((s,si)=>s.stops.forEach((st,ci)=>{if(st.addr&&st.cat&&st.cat!=="travel")places.push({d,si,ci,st})})));
   const groups=MCATS.map(([c,label,col])=>({c,label,col,items:places.filter(p=>p.st.cat===c)})).filter(g=>g.items.length);
   document.getElementById("menu").innerHTML=`<div class="mh"><b>NYC · Nov 10–14</b><button type="button" class="tb" id="mclose" aria-label="Close menu">×</button></div>
     <h4>Days</h4><ul class="mdays">${TRIP.days.map(d=>d.sections
-      ?`<li><button type="button" data-mday="${d.id}"${d.id===day.id?' aria-current="page"':""}><span class="dw">${esc(d.dow.slice(0,3))}<b>${esc(d.date.split(" ")[1])}</b></span><span class="dt">${esc(d.dow)} · ${esc(d.date)}</span><span class="ds">${esc(d.sections.map(s=>s.title).join(" · "))}</span>${d.id===day.id?'<span class="dc">Viewing</span>':""}</button></li>`
+      ?`<li><button type="button" data-mday="${d.id}"${d.id===day.id?' aria-current="page"':""}><span class="dw">${esc(d.dow.slice(0,3))}<b>${esc(d.date.split(" ")[1])}</b></span><span class="dt"><span class="dd">${esc(d.dow)} · ${esc(d.date)}</span>${d.id===day.id?'<span class="dc">Viewing</span>':""}<span class="dn">${dayTitle(d.id)}</span></span><span class="ds">${d.sections.map((x,i,a)=>`<span>${esc(x.title)}${i<a.length-1?" ·":""}</span>`).join(" ")}</span></button></li>`
       :`<li><span class="soon"><span class="dw">${esc(d.dow.slice(0,3))}<b>${esc(d.date.split(" ")[1])}</b></span><span class="dt">${esc(d.dow)} · ${esc(d.date)}</span><span class="ds">Coming soon</span></span></li>`).join("")}</ul>
     <h4>All places by type</h4>
     <div class="chips">${groups.map(g=>`<button type="button" data-mjump="mg-${g.c}"><i style="background:${g.col}"></i>${esc(g.label)}</button>`).join("")}</div>
